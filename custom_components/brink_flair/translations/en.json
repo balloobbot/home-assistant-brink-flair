@@ -1,0 +1,360 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Brink Flair",
+        "description": "How is the appliance reached?",
+        "menu_options": {
+          "serial": "Serial adapter on this machine",
+          "tcp": "Modbus RTU gateway on the network"
+        }
+      },
+      "serial": {
+        "title": "Serial connection",
+        "description": "The appliance leaves the factory on unit id 20 at 19200 baud, even parity, 1 stop bit. Check step 14.1 on its display says Modbus.",
+        "data": {
+          "device": "Serial device",
+          "unit_id": "Unit id",
+          "baudrate": "Baud rate",
+          "parity": "Parity",
+          "stopbits": "Stop bits"
+        },
+        "data_description": {
+          "device": "The RS-485 adapter, for example /dev/ttyUSB0.",
+          "unit_id": "The appliance's slave address, step 14.2 on its display.",
+          "baudrate": "Step 14.3 on the appliance's display.",
+          "parity": "Step 14.4 on the appliance's display.",
+          "stopbits": "1 unless the appliance has been changed from it."
+        }
+      },
+      "tcp": {
+        "title": "Gateway connection",
+        "description": "The gateway must forward RTU frames rather than translate them: the appliance speaks Modbus RTU and nothing else.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Unit id"
+        },
+        "data_description": {
+          "host": "The gateway's address on the network.",
+          "port": "The gateway's Modbus port, usually 502.",
+          "unit_id": "The appliance's slave address, step 14.2 on its display."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The appliance did not answer. Check the wiring, the unit id and the link settings, and that step 14.1 on its display says Modbus.",
+      "link_conflict": "Something already uses this connection with different link settings. One connection cannot serve both."
+    },
+    "abort": {
+      "already_configured": "This appliance is already configured"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "filter_dirty": {
+        "name": "Filter"
+      },
+      "extension_contact": {
+        "name": "Extension contact {index}"
+      },
+      "extension_relay": {
+        "name": "Extension relay {index}"
+      }
+    },
+    "button": {
+      "reset_filter_warning": {
+        "name": "Reset filter warning"
+      },
+      "appliance_reset": {
+        "name": "Restart appliance"
+      }
+    },
+    "number": {
+      "flow_rate": {
+        "name": "Modbus flow rate"
+      }
+    },
+    "select": {
+      "bypass_mode": {
+        "name": "Bypass mode",
+        "state": {
+          "automatic": "Automatic",
+          "closed": "Closed",
+          "open": "Open"
+        }
+      },
+      "flow_type": {
+        "name": "Flow type",
+        "state": {
+          "constant_pwm": "Constant PWM",
+          "constant_flow": "Constant flow",
+          "constant_mass_flow": "Constant mass flow"
+        }
+      },
+      "signal_output_mode": {
+        "name": "Signal output mode",
+        "state": {
+          "off": "Off",
+          "filter_warning": "Filter warning",
+          "error_status": "Error status",
+          "filter_warning_and_error_status": "Filter warning and error status"
+        }
+      }
+    },
+    "sensor": {
+      "supply_flow": {
+        "name": "Supply flow"
+      },
+      "exhaust_flow": {
+        "name": "Exhaust flow"
+      },
+      "supply_flow_setpoint": {
+        "name": "Supply flow setpoint"
+      },
+      "exhaust_flow_setpoint": {
+        "name": "Exhaust flow setpoint"
+      },
+      "supply_mass_flow": {
+        "name": "Supply mass flow"
+      },
+      "exhaust_mass_flow": {
+        "name": "Exhaust mass flow"
+      },
+      "supply_fan_temperature": {
+        "name": "Supply fan temperature"
+      },
+      "exhaust_fan_temperature": {
+        "name": "Exhaust fan temperature"
+      },
+      "supply_humidity": {
+        "name": "Supply humidity"
+      },
+      "exhaust_humidity": {
+        "name": "Exhaust humidity"
+      },
+      "ntc1_temperature": {
+        "name": "NTC 1 temperature"
+      },
+      "ntc2_temperature": {
+        "name": "NTC 2 temperature"
+      },
+      "rht_humidity": {
+        "name": "RHT sensor humidity"
+      },
+      "supply_pressure": {
+        "name": "Supply pressure"
+      },
+      "exhaust_pressure": {
+        "name": "Exhaust pressure"
+      },
+      "supply_fan_speed": {
+        "name": "Supply fan speed"
+      },
+      "exhaust_fan_speed": {
+        "name": "Exhaust fan speed"
+      },
+      "supply_anemometer_speed": {
+        "name": "Supply anemometer speed"
+      },
+      "exhaust_anemometer_speed": {
+        "name": "Exhaust anemometer speed"
+      },
+      "preheater_capacity": {
+        "name": "Preheater capacity"
+      },
+      "frost_heater_power": {
+        "name": "Frost heater power"
+      },
+      "fan_frost_reduction": {
+        "name": "Fan frost reduction"
+      },
+      "bypass_position": {
+        "name": "Bypass position"
+      },
+      "filter_hours": {
+        "name": "Hours since filter reset"
+      },
+      "operating_time": {
+        "name": "Operating time"
+      },
+      "filter_flow": {
+        "name": "Airflow since filter reset"
+      },
+      "total_flow": {
+        "name": "Total airflow"
+      },
+      "active_function": {
+        "name": "Active function",
+        "state": {
+          "standby": "Standby",
+          "bootloader": "Bootloader",
+          "non_blocking_error": "Non-blocking error",
+          "blocking_error": "Blocking error",
+          "manual": "Manual",
+          "holiday": "Holiday",
+          "night_ventilation": "Night ventilation",
+          "party": "Party",
+          "bypass_boost": "Bypass boost",
+          "normal_boost": "Normal boost",
+          "auto_co2": "Auto CO2",
+          "auto_ebus": "Auto eBus",
+          "auto_modbus": "Auto Modbus",
+          "auto_lan_wlan_portal": "Auto LAN/WLAN portal",
+          "auto_lan_wlan_local": "Auto LAN/WLAN local"
+        }
+      },
+      "fan_control_type": {
+        "name": "Fan control type",
+        "state": {
+          "initializing": "Initializing",
+          "constant_flow": "Constant flow",
+          "constant_pwm": "Constant PWM",
+          "off": "Off",
+          "error": "Error",
+          "mass_balance": "Mass balance",
+          "standby": "Standby"
+        }
+      },
+      "ventilation_mode": {
+        "name": "Ventilation mode",
+        "state": {
+          "holiday": "Holiday",
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "auto": "Auto"
+        }
+      },
+      "supply_fan_status": {
+        "name": "Supply fan status",
+        "state": {
+          "no_communication": "No communication",
+          "idle": "Idle",
+          "running": "Running",
+          "blocked": "Blocked",
+          "fan_error": "Fan error"
+        }
+      },
+      "exhaust_fan_status": {
+        "name": "Exhaust fan status",
+        "state": {
+          "no_communication": "No communication",
+          "idle": "Idle",
+          "running": "Running",
+          "blocked": "Blocked",
+          "fan_error": "Fan error"
+        }
+      },
+      "bypass_status": {
+        "name": "Bypass status",
+        "state": {
+          "initialize": "Initialize",
+          "opening": "Opening",
+          "closing": "Closing",
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "preheater_status": {
+        "name": "Preheater status",
+        "state": {
+          "initialize": "Initialize",
+          "inactive": "Inactive",
+          "active": "Active",
+          "test_mode": "Test mode"
+        }
+      },
+      "frost_status": {
+        "name": "Frost status",
+        "state": {
+          "not_initialized": "Not initialized",
+          "power_up_delay": "Power up delay",
+          "no_frost": "No frost",
+          "no_frost_delay": "No frost delay",
+          "frost_control_start_delay": "Frost control start delay",
+          "wait_for_icing": "Wait for icing",
+          "ice_detected_delay": "Ice detected delay",
+          "heating": "Heating",
+          "wait_for_free_heater": "Wait for free heater",
+          "fan_control_start_delay": "Fan control start delay",
+          "fan_control_wait_delay": "Fan control wait delay",
+          "fan_control": "Fan control",
+          "fan_off_delay": "Fan off delay",
+          "fan_off": "Fan off",
+          "fan_restarting": "Fan restarting",
+          "error": "Error",
+          "test_mode": "Test mode"
+        }
+      },
+      "flow_switch_position": {
+        "name": "Flow switch position",
+        "state": {
+          "holiday": "Holiday",
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "invalid": "Invalid"
+        }
+      },
+      "signal_output": {
+        "name": "Signal output",
+        "state": {
+          "zero_volt": "0 V",
+          "twenty_four_volt": "24 V"
+        }
+      },
+      "ebus_power_status": {
+        "name": "eBus power status",
+        "state": {
+          "power_up": "Power up",
+          "initialize_power": "Initialize power",
+          "power_off": "Power off",
+          "power_on": "Power on",
+          "wait_for_power_off": "Wait for power off",
+          "slave_power_off": "Slave power off"
+        }
+      },
+      "geo_heat_exchanger_status": {
+        "name": "Geo heat exchanger status",
+        "state": {
+          "open_low": "Open low",
+          "closed": "Closed",
+          "open_high": "Open high"
+        }
+      },
+      "co2_sensor": {
+        "name": "CO2 sensor {index}"
+      },
+      "co2_sensor_status": {
+        "name": "CO2 sensor {index} status",
+        "state": {
+          "error": "Error",
+          "not_initialized": "Not initialized",
+          "idle": "Idle",
+          "warming_up": "Warming up",
+          "running": "Running",
+          "calibrating": "Calibrating",
+          "self_test": "Self test"
+        }
+      },
+      "display_switch": {
+        "name": "Display switch"
+      },
+      "extension_temperature": {
+        "name": "Extension temperature"
+      },
+      "extension_analogue_input": {
+        "name": "Extension analogue input {index}"
+      },
+      "extension_analogue_output": {
+        "name": "Extension analogue output {index}"
+      }
+    }
+  },
+  "exceptions": {
+    "write_failed": {
+      "message": "The appliance did not accept the write: {error}"
+    }
+  }
+}

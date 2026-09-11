@@ -1,0 +1,13 @@
+{
+  "domain": "brink_flair",
+  "name": "Brink Flair",
+  "codeowners": ["@balloob"],
+  "config_flow": true,
+  "dependencies": ["modbus"],
+  "documentation": "https://github.com/balloobbot/home-assistant-brink-flair",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/balloobbot/home-assistant-brink-flair/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

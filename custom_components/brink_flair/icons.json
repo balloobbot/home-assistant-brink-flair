@@ -1,0 +1,51 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "extension_contact": { "default": "mdi:electric-switch" },
+      "extension_relay": { "default": "mdi:electric-switch-closed" },
+      "filter_dirty": { "default": "mdi:air-filter" }
+    },
+    "button": {
+      "reset_filter_warning": { "default": "mdi:air-filter" }
+    },
+    "number": {
+      "flow_rate": { "default": "mdi:fan" }
+    },
+    "select": {
+      "bypass_mode": { "default": "mdi:valve" },
+      "flow_type": { "default": "mdi:tune-variant" },
+      "signal_output_mode": { "default": "mdi:export" }
+    },
+    "sensor": {
+      "active_function": { "default": "mdi:state-machine" },
+      "bypass_position": { "default": "mdi:valve" },
+      "bypass_status": { "default": "mdi:valve" },
+      "display_switch": { "default": "mdi:tablet-dashboard" },
+      "ebus_power_status": { "default": "mdi:power-plug" },
+      "exhaust_anemometer_speed": { "default": "mdi:weather-windy" },
+      "exhaust_fan_speed": { "default": "mdi:fan" },
+      "exhaust_flow": { "default": "mdi:fan-minus" },
+      "exhaust_flow_setpoint": { "default": "mdi:fan-minus" },
+      "exhaust_mass_flow": { "default": "mdi:weight-kilogram" },
+      "fan_control_type": { "default": "mdi:fan-auto" },
+      "fan_frost_reduction": { "default": "mdi:snowflake-alert" },
+      "filter_flow": { "default": "mdi:air-filter" },
+      "filter_hours": { "default": "mdi:air-filter" },
+      "flow_switch_position": { "default": "mdi:toggle-switch-variant" },
+      "frost_heater_power": { "default": "mdi:snowflake-melt" },
+      "frost_status": { "default": "mdi:snowflake" },
+      "geo_heat_exchanger_status": { "default": "mdi:heat-pump" },
+      "operating_time": { "default": "mdi:timer-outline" },
+      "preheater_capacity": { "default": "mdi:radiator" },
+      "preheater_status": { "default": "mdi:radiator" },
+      "signal_output": { "default": "mdi:export" },
+      "supply_anemometer_speed": { "default": "mdi:weather-windy" },
+      "supply_fan_speed": { "default": "mdi:fan" },
+      "supply_flow": { "default": "mdi:fan-plus" },
+      "supply_flow_setpoint": { "default": "mdi:fan-plus" },
+      "supply_mass_flow": { "default": "mdi:weight-kilogram" },
+      "total_flow": { "default": "mdi:air-conditioner" },
+      "ventilation_mode": { "default": "mdi:fan-clock" }
+    }
+  }
+}

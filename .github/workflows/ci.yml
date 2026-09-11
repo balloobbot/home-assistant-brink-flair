@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Mypy
+        run: uv run mypy
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync
+      - name: Run tests
+        run: uv run pytest
+
+  strings:
+    # The translation files are generated from the vendored library's enums.
+    # A stale copy would show raw enum names in the UI, so CI regenerates
+    # them and fails on a diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Regenerate the translation files
+        run: uv run --with modbus-connection script/generate_strings.py
+      - name: Fail if they were out of date
+        run: git diff --exit-code
+
+  vendored:
+    # The vendored library must match the released one, or a fix made in the
+    # library repository silently never reaches anyone.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check out the library beside it
+        uses: actions/checkout@v5
+        with:
+          repository: balloobbot/brink-flair-modbus
+          path: brink-flair-modbus
+      - name: Refresh the vendored copy
+        run: ./script/vendor.sh brink-flair-modbus
+      - name: Fail if it was out of date
+        run: git diff --exit-code custom_components/brink_flair/brink_flair_modbus
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hacs/action@main
+        with:
+          category: integration

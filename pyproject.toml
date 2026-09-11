@@ -1,0 +1,38 @@
+[project]
+name = "home-assistant-brink-flair"
+version = "0.1.0"
+description = "Home Assistant custom integration for Brink heat recovery appliances over Modbus."
+requires-python = ">=3.14.2"
+
+[dependency-groups]
+dev = [
+    "homeassistant>=2026.9.0",
+    # The version Home Assistant's own modbus integration pins, which is what
+    # the vendored library runs against in production.
+    "modbus-connection[tmodbus]==4.10.0",
+    "pymodbus==3.13.1",
+    "pytest>=8",
+    "pytest-homeassistant-custom-component",
+    "ruff>=0.15",
+    "mypy>=1.14",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+# The vendored library is the other repository's code, formatted and linted
+# there against its own, older target version. Reformatting it here would
+# rewrite it to syntax that repository does not allow, and script/vendor.sh
+# would then undo the change on the next refresh.
+extend-exclude = ["custom_components/brink_flair/brink_flair_modbus"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.14"
+files = ["custom_components", "script"]
+ignore_missing_imports = true
