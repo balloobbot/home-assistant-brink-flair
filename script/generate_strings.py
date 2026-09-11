@@ -161,12 +161,13 @@ STRINGS: dict[str, Any] = {
                 "title": "Brink Flair",
                 "description": "How is the appliance reached?",
                 "menu_options": {
-                    "serial": "Serial adapter on this machine",
-                    "tcp": "Modbus RTU gateway on the network",
+                    "serial": "A serial adapter on this machine",
+                    "serial_server": "A serial server on the network (forwards RTU)",
+                    "gateway": "A Modbus gateway on the network (converts to RTU)",
                 },
             },
             "serial": {
-                "title": "Serial connection",
+                "title": "Serial adapter",
                 "description": (
                     "The appliance leaves the factory on unit id 20 at 19200 baud, "
                     "even parity, 1 stop bit. Check step 14.1 on its display says "
@@ -189,20 +190,36 @@ STRINGS: dict[str, Any] = {
                     "stopbits": "1 unless the appliance has been changed from it.",
                 },
             },
-            "tcp": {
-                "title": "Gateway connection",
+            "serial_server": {
+                "title": "Serial server",
                 "description": (
-                    "The gateway must forward RTU frames rather than translate "
-                    "them: the appliance speaks Modbus RTU and nothing else."
+                    "A box that forwards the RS-485 line byte for byte, such as a "
+                    "USR-TCP232 or a Waveshare in TCP-server mode. Set the "
+                    "appliance's own line settings on the box itself: 19200 baud, "
+                    "even parity, 1 stop bit out of the factory."
                 ),
-                "data": {
-                    "host": "Host",
-                    "port": "Port",
-                    "unit_id": "Unit id",
+                "data": {"host": "Host", "port": "Port", "unit_id": "Unit id"},
+                "data_description": {
+                    "host": "The serial server's address on the network.",
+                    "port": "The port it listens on, often 502 or 8899.",
+                    "unit_id": (
+                        "The appliance's slave address, step 14.2 on its display."
+                    ),
                 },
+            },
+            "gateway": {
+                "title": "Modbus gateway",
+                "description": (
+                    "A box that speaks Modbus TCP on the network and converts to "
+                    "Modbus RTU on the serial side, such as a Moxa MGate or a "
+                    "Waveshare in Modbus-gateway mode. If you are not sure which "
+                    "of the two kinds you have, try this one and the serial "
+                    "server; nothing on the network says which a box is doing."
+                ),
+                "data": {"host": "Host", "port": "Port", "unit_id": "Unit id"},
                 "data_description": {
                     "host": "The gateway's address on the network.",
-                    "port": "The gateway's Modbus port, usually 502.",
+                    "port": "Its Modbus TCP port, usually 502.",
                     "unit_id": (
                         "The appliance's slave address, step 14.2 on its display."
                     ),

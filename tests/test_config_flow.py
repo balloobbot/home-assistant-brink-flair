@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
@@ -11,7 +12,7 @@ from modbus_connection import ModbusTimeoutError
 from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.brink_flair.connection import CONF_UNIT_ID
+from custom_components.brink_flair.connection import CONF_UNIT_ID, connection_params
 from custom_components.brink_flair.const import (
     CONF_BAUDRATE,
     CONF_DEVICE,
@@ -19,8 +20,9 @@ from custom_components.brink_flair.const import (
     CONF_STOPBITS,
     CONF_TRANSPORT,
     DOMAIN,
+    TRANSPORT_GATEWAY,
     TRANSPORT_SERIAL,
-    TRANSPORT_TCP,
+    TRANSPORT_SERIAL_SERVER,
 )
 
 from .conftest import UNIT_ID
@@ -32,7 +34,11 @@ async def start(hass: HomeAssistant, transport: str) -> str:
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
-    assert set(result["menu_options"]) == {TRANSPORT_SERIAL, TRANSPORT_TCP}
+    assert set(result["menu_options"]) == {
+        TRANSPORT_SERIAL,
+        TRANSPORT_SERIAL_SERVER,
+        TRANSPORT_GATEWAY,
+    }
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": transport}
@@ -95,10 +101,19 @@ async def test_the_numbers_are_stored_as_numbers(
     assert all(isinstance(data[key], int) for key in (CONF_BAUDRATE, CONF_UNIT_ID))
 
 
-async def test_an_appliance_behind_a_gateway(
-    hass: HomeAssistant, modbus: MockModbusUnit
+@pytest.mark.parametrize(
+    ("transport", "framer"),
+    [
+        # A transparent serial server forwards the RTU frames as they are; a
+        # Modbus gateway terminates Modbus TCP and re-frames to RTU itself.
+        (TRANSPORT_SERIAL_SERVER, "rtu"),
+        (TRANSPORT_GATEWAY, "socket"),
+    ],
+)
+async def test_an_appliance_on_the_network(
+    hass: HomeAssistant, modbus: MockModbusUnit, transport: str, framer: str
 ) -> None:
-    flow_id = await start(hass, TRANSPORT_TCP)
+    flow_id = await start(hass, transport)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,
@@ -107,14 +122,31 @@ async def test_an_appliance_behind_a_gateway(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Brink Flair (192.168.1.50:502)"
-    assert result["data"][CONF_PORT] == 502
+    assert result["data"][CONF_TRANSPORT] == transport
+
+    params, unit_id = connection_params(result["data"])
+    assert params.framer == framer
+    assert unit_id == UNIT_ID
+
+
+async def test_both_network_boxes_key_on_the_same_endpoint(
+    hass: HomeAssistant, modbus: MockModbusUnit
+) -> None:
+    """So Home Assistant refuses the second rather than opening a second
+    socket onto one half-duplex line with the wrong framing."""
+    shared = {CONF_HOST: "192.168.1.50", CONF_PORT: 502, CONF_UNIT_ID: UNIT_ID}
+    server, _ = connection_params({**shared, CONF_TRANSPORT: TRANSPORT_SERIAL_SERVER})
+    gateway, _ = connection_params({**shared, CONF_TRANSPORT: TRANSPORT_GATEWAY})
+
+    assert server.endpoint == gateway.endpoint
+    assert server != gateway
 
 
 async def test_an_appliance_that_does_not_answer(
     hass: HomeAssistant, modbus: MockModbusUnit
 ) -> None:
     modbus.fail_requests(ModbusTimeoutError())
-    flow_id = await start(hass, TRANSPORT_TCP)
+    flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,
@@ -144,7 +176,7 @@ async def test_an_endpoint_already_held_on_other_link_settings(
     monkeypatch.setattr(
         "custom_components.brink_flair.config_flow.async_get_temporary_unit", refuse
     )
-    flow_id = await start(hass, TRANSPORT_TCP)
+    flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,
@@ -182,7 +214,7 @@ async def test_an_appliance_whose_serial_does_not_decode(
 ) -> None:
     """A nibble above 9 is not BCD, so the endpoint becomes the unique id."""
     modbus.input[4010] = [0x1234, 0x5678, 0x90AB]
-    flow_id = await start(hass, TRANSPORT_TCP)
+    flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,

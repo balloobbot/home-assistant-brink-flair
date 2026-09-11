@@ -21,7 +21,11 @@ from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.brink_flair.connection import CONF_UNIT_ID
-from custom_components.brink_flair.const import CONF_TRANSPORT, DOMAIN, TRANSPORT_TCP
+from custom_components.brink_flair.const import (
+    CONF_TRANSPORT,
+    DOMAIN,
+    TRANSPORT_SERIAL_SERVER,
+)
 
 from .registers import SERIAL, seed
 
@@ -95,7 +99,7 @@ def _patched(unit: MockModbusUnit) -> Any:
 
 
 ENTRY_DATA = {
-    CONF_TRANSPORT: TRANSPORT_TCP,
+    CONF_TRANSPORT: TRANSPORT_SERIAL_SERVER,
     CONF_HOST: "192.168.1.50",
     CONF_PORT: 502,
     CONF_UNIT_ID: UNIT_ID,

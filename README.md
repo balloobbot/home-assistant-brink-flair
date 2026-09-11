@@ -10,7 +10,8 @@ standby, open the bypass, reset the filter warning.
 
 The appliance is a Modbus RTU device on RS-485. Reach it with a USB RS-485
 adapter on the machine running Home Assistant, or over the network through a
-Modbus RTU gateway.
+serial server or a Modbus gateway — see
+[Which box do I have?](#which-box-do-i-have).
 
 ## What you get
 
@@ -80,22 +81,44 @@ Nothing is installed from PyPI: the device library is bundled — see
 1. Go to **Settings → Devices & services → Add integration**, and search for
    **Brink Flair**.
 2. Choose how the appliance is reached:
-   - **Serial adapter on this machine** — give the device path (for example
-     `/dev/ttyUSB0`), the unit id, and the baud rate, parity and stop bits
-     from steps 14.2 to 14.4.
-   - **Modbus RTU gateway on the network** — give the gateway's host and
-     port, and the unit id. Configure the gateway to **forward** RTU frames
-     rather than translate them to Modbus TCP.
+   - **A serial adapter on this machine** — give the device path (for
+     example `/dev/ttyUSB0`), the unit id, and the baud rate, parity and stop
+     bits from steps 14.2 to 14.4.
+   - **A serial server on the network** — give its host and port, and the
+     unit id. Set the appliance's line settings on the box itself.
+   - **A Modbus gateway on the network** — give its host and port, and the
+     unit id.
 3. Home Assistant reads the appliance's identity to check the settings, then
    creates the device.
+
+### Which box do I have?
+
+The two network options are different products, and they do not speak the
+same protocol:
+
+| | What it does | What crosses the network |
+| --- | --- | --- |
+| **Serial server** | Forwards the RS-485 line byte for byte | Modbus RTU frames, CRC and all |
+| **Modbus gateway** | Terminates Modbus TCP and re-frames to RTU | Modbus TCP, with an MBAP header and no CRC |
+
+USR-TCP232 and Waveshare RS485-TO-ETH boxes are usually run as serial
+servers; a Moxa MGate is a gateway. **Many boxes are either, depending on how
+they are configured**, and nothing on the network says which — so if one
+choice times out against a box you believe is wired and addressed correctly,
+try the other before suspecting the appliance.
+
+Both are stored as a Modbus TCP connection to the same host and port, so Home
+Assistant shares one socket with anything else that reaches the same box. It
+will refuse to configure the same host and port both ways at once: one line
+cannot be spoken to in two protocols.
 
 To add a second appliance, repeat the flow with its own unit id. Appliances on
 one line or one gateway share a connection automatically.
 
 If setup fails with "the appliance did not answer", work through step 14.1,
-the unit id, the A/B wiring polarity and the terminator in that order. The
-parity is the setting people miss most: the factory default is **Even**, not
-the Modbus-usual None.
+the unit id, the A/B wiring polarity and the terminator in that order, then
+try the other network option. The parity is the setting people miss most: the
+factory default is **Even**, not the Modbus-usual None.
 
 ## Driving the ventilation
 

@@ -1,9 +1,14 @@
 """Config flow for the Brink Flair integration.
 
-The appliance is an RS-485 device, so the flow first asks how it is reached —
-a serial adapter on the machine running Home Assistant, or a gateway on the
-network — and then only what that transport needs. Nothing else is asked:
+The appliance is an RS-485 device, so the flow first asks how it is reached
+and then only what that way of reaching it needs. Nothing else is asked:
 which optional modules the appliance carries is settled by probing it.
+
+The two network options are two different boxes rather than two ways of
+describing one, and they speak different protocols — so the flow asks which
+box the user has instead of asking for a framing. Many boxes can be either,
+depending on how they are configured, which is why this cannot be detected
+from the address.
 """
 
 from __future__ import annotations
@@ -42,8 +47,9 @@ from .const import (
     DEFAULT_UNIT_ID,
     DOMAIN,
     PARITIES,
+    TRANSPORT_GATEWAY,
     TRANSPORT_SERIAL,
-    TRANSPORT_TCP,
+    TRANSPORT_SERIAL_SERVER,
 )
 
 UNIT_ID_SELECTOR = NumberSelector(
@@ -72,7 +78,7 @@ SERIAL_SCHEMA = vol.Schema(
     }
 )
 
-TCP_SCHEMA = vol.Schema(
+NETWORK_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): TextSelector(),
         vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
@@ -91,9 +97,10 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask which transport the appliance is reached over."""
+        """Ask how the appliance is reached."""
         return self.async_show_menu(
-            step_id="user", menu_options=[TRANSPORT_SERIAL, TRANSPORT_TCP]
+            step_id="user",
+            menu_options=[TRANSPORT_SERIAL, TRANSPORT_SERIAL_SERVER, TRANSPORT_GATEWAY],
         )
 
     async def async_step_serial(
@@ -102,11 +109,21 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
         """Configure an appliance on a local serial adapter."""
         return await self._async_configure(TRANSPORT_SERIAL, SERIAL_SCHEMA, user_input)
 
-    async def async_step_tcp(
+    async def async_step_serial_server(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Configure an appliance behind an RTU-to-TCP gateway."""
-        return await self._async_configure(TRANSPORT_TCP, TCP_SCHEMA, user_input)
+        """Configure an appliance behind a transparent serial server."""
+        return await self._async_configure(
+            TRANSPORT_SERIAL_SERVER, NETWORK_SCHEMA, user_input
+        )
+
+    async def async_step_gateway(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure an appliance behind a Modbus gateway."""
+        return await self._async_configure(
+            TRANSPORT_GATEWAY, NETWORK_SCHEMA, user_input
+        )
 
     async def _async_configure(
         self,

@@ -4,9 +4,17 @@ Shared by the config flow, which probes with them, and by setup, which asks
 ``modbus`` for a unit with them. Both must build the same object from the
 same data, or the two would land on different connections.
 
-The appliance speaks Modbus RTU on RS-485 and nothing else, so the framing is
-``rtu`` for both transports: over TCP it is reached through a gateway that
-forwards those frames rather than translating them.
+The appliance speaks Modbus RTU on RS-485 and nothing else, so what differs
+between the two network transports is the box in front of the line rather
+than the appliance. A transparent serial server forwards the RTU frames as
+they are, which is ``rtu`` framing; a Modbus gateway terminates Modbus TCP
+and re-frames to RTU itself, which is ``socket``.
+
+Both are ``ModbusTcpParams``, so both key on ``("tcp", host, port)`` and
+share a connection with whatever else reaches that box. Describing a serial
+server as a ``socket://`` serial device would work too, and would key
+differently — two integrations would then open two sockets onto one
+half-duplex line and interleave frames on it.
 """
 
 from __future__ import annotations
@@ -24,6 +32,7 @@ from .const import (
     CONF_STOPBITS,
     CONF_TRANSPORT,
     TRANSPORT_SERIAL,
+    TRANSPORT_SERIAL_SERVER,
 )
 
 CONF_UNIT_ID = "unit_id"
@@ -43,7 +52,11 @@ def connection_params(data: Mapping[str, Any]) -> tuple[BrinkFlairParams, int]:
         )
     else:
         params = ModbusTcpParams(
-            host=data[CONF_HOST], port=data[CONF_PORT], framer="rtu"
+            host=data[CONF_HOST],
+            port=data[CONF_PORT],
+            framer="rtu"
+            if data[CONF_TRANSPORT] == TRANSPORT_SERIAL_SERVER
+            else "socket",
         )
     return params, data[CONF_UNIT_ID]
 

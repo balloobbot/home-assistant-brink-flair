@@ -13,8 +13,15 @@ CONF_BAUDRATE: Final = "baudrate"
 CONF_PARITY: Final = "parity"
 CONF_STOPBITS: Final = "stopbits"
 
+# How the appliance is reached. The two network options are different boxes,
+# not two ways of describing one: a transparent serial server forwards the
+# RTU frames as they are, while a Modbus gateway terminates Modbus TCP and
+# re-frames to RTU on the serial side.
 TRANSPORT_SERIAL: Final = "serial"
-TRANSPORT_TCP: Final = "tcp"
+TRANSPORT_SERIAL_SERVER: Final = "serial_server"
+TRANSPORT_GATEWAY: Final = "gateway"
+
+NETWORK_TRANSPORTS: Final = (TRANSPORT_SERIAL_SERVER, TRANSPORT_GATEWAY)
 
 # The appliance's factory link settings, from the spec's step 14.1-14.4 table.
 DEFAULT_UNIT_ID: Final = 20

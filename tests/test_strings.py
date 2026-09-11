@@ -20,7 +20,12 @@ from custom_components.brink_flair import (
     select,
     sensor,
 )
-from custom_components.brink_flair.const import DOMAIN
+from custom_components.brink_flair.const import (
+    DOMAIN,
+    TRANSPORT_GATEWAY,
+    TRANSPORT_SERIAL,
+    TRANSPORT_SERIAL_SERVER,
+)
 
 COMPONENT = Path(__file__).resolve().parent.parent / "custom_components" / "brink_flair"
 
@@ -108,7 +113,19 @@ def test_the_config_flow_errors_are_the_ones_the_flow_raises(
     strings: dict[str, Any],
 ) -> None:
     assert set(strings["config"]["error"]) == {"cannot_connect", "link_conflict"}
-    assert set(strings["config"]["step"]["user"]["menu_options"]) == {"serial", "tcp"}
+
+
+def test_every_way_of_reaching_the_appliance_is_offered_and_described(
+    strings: dict[str, Any],
+) -> None:
+    """A menu entry with no step behind it dead-ends the flow."""
+    transports = {TRANSPORT_SERIAL, TRANSPORT_SERIAL_SERVER, TRANSPORT_GATEWAY}
+    step = strings["config"]["step"]
+
+    assert set(step["user"]["menu_options"]) == transports
+    assert transports <= set(step)
+    for transport in transports:
+        assert step[transport]["description"]
 
 
 def test_the_manifest(strings: dict[str, Any]) -> None:
