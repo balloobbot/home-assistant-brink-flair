@@ -211,7 +211,10 @@ uv run --with modbus-connection script/generate_strings.py
 
 This is a community integration. Brink Climate Systems has nothing to do with
 it, does not support it, and it may stop working if Brink changes the register
-map. The register definitions come from Brink's published *Installation
+map. The icon and logo under `custom_components/brink_flair/brand/` are
+Brink's own, taken from the
+[Home Assistant brands](https://github.com/home-assistant/brands) repository,
+and remain Brink's trademarks. The register definitions come from Brink's published *Installation
 regulations Modbus UWA2-B/UWA2-E* (614882-D), which is committed in the
 library's repository.
 
