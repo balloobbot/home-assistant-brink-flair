@@ -7,7 +7,12 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
-from modbus_connection import ModbusSerialParams, ModbusTcpParams, ModbusTimeoutError
+from modbus_connection import (
+    IllegalDataAddressError,
+    ModbusSerialParams,
+    ModbusTcpParams,
+    ModbusTimeoutError,
+)
 from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -103,27 +108,45 @@ async def test_the_numbers_are_stored_as_numbers(
 async def test_an_appliance_behind_a_serial_server(
     hass: HomeAssistant, modbus: MockModbusUnit
 ) -> None:
-    """A box forwarding the line is a serial link, named by a socket:// device."""
+    """A box forwarding the line is a serial link, named by a socket:// device.
+
+    The flow does not ask what speed that line runs at. The appliance knows,
+    so it is read rather than guessed — here a speed that is not the factory
+    default, so a fallback could not pass this.
+    """
+    modbus.holding[7992] = 5  # 38400
     flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,
-        {
-            CONF_HOST: "192.168.1.50",
-            CONF_PORT: 8899,
-            CONF_BAUDRATE: "19200",
-            CONF_UNIT_ID: UNIT_ID,
-        },
+        {CONF_HOST: "192.168.1.50", CONF_PORT: 8899, CONF_UNIT_ID: UNIT_ID},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TRANSPORT] == TRANSPORT_SERIAL_SERVER
+    assert result["data"][CONF_BAUDRATE] == 38400
 
     params, unit_id = connection_params(result["data"])
     assert isinstance(params, ModbusSerialParams)
     assert params.device == "socket://192.168.1.50:8899"
-    assert params.baudrate == 19200
+    assert params.baudrate == 38400
     assert unit_id == UNIT_ID
+
+
+async def test_a_serial_server_falls_back_when_the_speed_cannot_be_read(
+    hass: HomeAssistant, modbus: MockModbusUnit
+) -> None:
+    """An appliance that refuses register 7992 still gets configured."""
+    modbus.fail_read(7992, IllegalDataAddressError())
+    flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
+
+    result = await hass.config_entries.flow.async_configure(
+        flow_id,
+        {CONF_HOST: "192.168.1.50", CONF_PORT: 8899, CONF_UNIT_ID: UNIT_ID},
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_BAUDRATE] == 19200  # the appliance's own default
 
 
 async def test_an_appliance_behind_a_gateway(

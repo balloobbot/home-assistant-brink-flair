@@ -30,17 +30,15 @@
       },
       "serial_server": {
         "title": "Serial server",
-        "description": "A box that forwards the RS-485 line byte for byte, such as a USR-TCP232 or a Waveshare in TCP-server mode. Set the appliance's own line settings on the box itself: 19200 baud, even parity, 1 stop bit out of the factory. Parity and stop bits are the box's business; the baud rate is asked for because it spaces the frames.",
+        "description": "A box that forwards the RS-485 line byte for byte, such as a USR-TCP232 or a Waveshare in TCP-server mode. Set the appliance's own line settings on the box itself: 19200 baud, even parity, 1 stop bit out of the factory. They are not asked for here; the appliance reports the speed it runs at.",
         "data": {
           "host": "Host",
           "port": "Port",
-          "baudrate": "Baud rate",
           "unit_id": "Unit id"
         },
         "data_description": {
           "host": "The serial server's address on the network.",
           "port": "The port it listens on, often 502 or 8899.",
-          "baudrate": "The speed the box runs its RS-485 line at, step 14.3 on the appliance's display. It spaces the Modbus frames.",
           "unit_id": "The appliance's slave address, step 14.2 on its display."
         }
       },

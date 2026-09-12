@@ -84,9 +84,9 @@ Nothing is installed from PyPI: the device library is bundled — see
    - **A serial adapter on this machine** — give the device path (for
      example `/dev/ttyUSB0`), the unit id, and the baud rate, parity and stop
      bits from steps 14.2 to 14.4.
-   - **A serial server on the network** — give its host, port, unit id, and
-     the baud rate the box runs its RS-485 line at. Parity and stop bits are
-     set on the box; the baud rate is asked for because it spaces the frames.
+   - **A serial server on the network** — give its host, port and unit id.
+     The line settings are set on the box, and the speed it runs at is read
+     from the appliance rather than asked for.
    - **A Modbus gateway on the network** — give its host and port, and the
      unit id.
 3. Home Assistant reads the appliance's identity to check the settings, then

@@ -32,6 +32,7 @@ from .const import (
     CONF_PARITY,
     CONF_STOPBITS,
     CONF_TRANSPORT,
+    DEFAULT_BAUDRATE,
     TRANSPORT_GATEWAY,
     TRANSPORT_SERIAL,
 )
@@ -71,7 +72,9 @@ def connection_params(data: Mapping[str, Any]) -> tuple[BrinkFlairParams, int]:
         # they would make two descriptions of one server compare unequal.
         params = ModbusSerialParams(
             device=_socket_device(data[CONF_HOST], data[CONF_PORT]),
-            baudrate=data[CONF_BAUDRATE],
+            # Absent while the config flow is still probing, which is how it
+            # learns the speed in the first place.
+            baudrate=data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE),
         )
     return params, data[CONF_UNIT_ID]
 

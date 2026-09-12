@@ -29,9 +29,14 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TextSelector,
 )
-from modbus_connection import ModbusError
+from modbus_connection import ModbusError, ModbusUnit
 
-from .brink_flair_modbus import SLAVE_ADDRESS_MAX, SLAVE_ADDRESS_MIN, BrinkFlair
+from .brink_flair_modbus import (
+    SLAVE_ADDRESS_MAX,
+    SLAVE_ADDRESS_MIN,
+    BrinkFlair,
+    Parameters,
+)
 from .connection import CONF_UNIT_ID, connection_params, endpoint_name
 from .const import (
     BAUDRATES,
@@ -51,6 +56,9 @@ from .const import (
     TRANSPORT_SERIAL,
     TRANSPORT_SERIAL_SERVER,
 )
+
+MODBUS_SPEED = "modbus_speed"
+"""The settings field naming register 7992."""
 
 UNIT_ID_SELECTOR = NumberSelector(
     NumberSelectorConfig(
@@ -78,7 +86,7 @@ SERIAL_SCHEMA = vol.Schema(
     }
 )
 
-GATEWAY_SCHEMA = vol.Schema(
+NETWORK_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): TextSelector(),
         vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
@@ -86,13 +94,6 @@ GATEWAY_SCHEMA = vol.Schema(
         ),
         vol.Required(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): UNIT_ID_SELECTOR,
     }
-)
-
-# A serial server opens no port here, so it needs no parity or stop bits. It
-# needs the baud rate: RTU separates frames by 3.5 character times, and that
-# gap follows from the speed the box runs its own line at.
-SERIAL_SERVER_SCHEMA = GATEWAY_SCHEMA.extend(
-    {vol.Required(CONF_BAUDRATE, default=str(DEFAULT_BAUDRATE)): _options(BAUDRATES)}
 )
 
 
@@ -121,7 +122,7 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Configure an appliance behind a transparent serial server."""
         return await self._async_configure(
-            TRANSPORT_SERIAL_SERVER, SERIAL_SERVER_SCHEMA, user_input
+            TRANSPORT_SERIAL_SERVER, NETWORK_SCHEMA, user_input
         )
 
     async def async_step_gateway(
@@ -129,7 +130,7 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Configure an appliance behind a Modbus gateway."""
         return await self._async_configure(
-            TRANSPORT_GATEWAY, GATEWAY_SCHEMA, user_input
+            TRANSPORT_GATEWAY, NETWORK_SCHEMA, user_input
         )
 
     async def _async_configure(
@@ -143,13 +144,15 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = _normalise({**user_input, CONF_TRANSPORT: transport})
             try:
-                serial_number = await self._async_probe(data)
+                serial_number, baudrate = await self._async_probe(data)
             except ModbusError:
                 errors["base"] = "cannot_connect"
             except HomeAssistantError:
                 # The endpoint is already held on different link settings.
                 errors["base"] = "link_conflict"
             else:
+                if transport == TRANSPORT_SERIAL_SERVER:
+                    data[CONF_BAUDRATE] = baudrate or DEFAULT_BAUDRATE
                 endpoint = endpoint_name(data)
                 await self.async_set_unique_id(
                     serial_number or f"{endpoint}-{data[CONF_UNIT_ID]}"
@@ -163,18 +166,36 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id=transport, data_schema=schema, errors=errors
         )
 
-    async def _async_probe(self, data: dict[str, Any]) -> str | None:
-        """Read the appliance's identity, or raise if it does not answer.
+    async def _async_probe(self, data: dict[str, Any]) -> tuple[str | None, int | None]:
+        """Read the appliance's identity and line speed, or raise if it is quiet.
 
-        Two register reads. The serial number becomes the unique id; an
+        Three register reads. The serial number becomes the unique id; an
         appliance whose serial does not decode falls back to the endpoint it
-        was found at.
+        was found at. The line speed is what a serial server has to pace its
+        frames from, and the appliance is the one that knows it.
         """
         params, unit_id = connection_params(data)
         async with async_get_temporary_unit(self.hass, params, unit_id) as unit:
             appliance = BrinkFlair(unit)
             await appliance.identity.async_update()
-            return appliance.identity.serial_number
+            return appliance.identity.serial_number, await _async_read_baudrate(unit)
+
+
+async def _async_read_baudrate(unit: ModbusUnit) -> int | None:
+    """The speed the appliance runs its RS-485 line at, or ``None``.
+
+    One register read: the settings component is narrowed to the one field,
+    so nothing else in that block is fetched. A firmware that refuses it
+    leaves the caller to fall back.
+    """
+    settings = Parameters(unit)
+    settings.restrict_fields((MODBUS_SPEED,))
+    try:
+        await settings.async_update()
+    except ModbusError:
+        return None
+    speed = settings.modbus_speed
+    return speed.bits_per_second if speed is not None else None
 
 
 def _normalise(data: dict[str, Any]) -> dict[str, Any]:
