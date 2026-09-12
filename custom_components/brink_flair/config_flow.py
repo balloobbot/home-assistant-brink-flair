@@ -78,7 +78,7 @@ SERIAL_SCHEMA = vol.Schema(
     }
 )
 
-NETWORK_SCHEMA = vol.Schema(
+GATEWAY_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): TextSelector(),
         vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
@@ -86,6 +86,13 @@ NETWORK_SCHEMA = vol.Schema(
         ),
         vol.Required(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): UNIT_ID_SELECTOR,
     }
+)
+
+# A serial server opens no port here, so it needs no parity or stop bits. It
+# needs the baud rate: RTU separates frames by 3.5 character times, and that
+# gap follows from the speed the box runs its own line at.
+SERIAL_SERVER_SCHEMA = GATEWAY_SCHEMA.extend(
+    {vol.Required(CONF_BAUDRATE, default=str(DEFAULT_BAUDRATE)): _options(BAUDRATES)}
 )
 
 
@@ -114,7 +121,7 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Configure an appliance behind a transparent serial server."""
         return await self._async_configure(
-            TRANSPORT_SERIAL_SERVER, NETWORK_SCHEMA, user_input
+            TRANSPORT_SERIAL_SERVER, SERIAL_SERVER_SCHEMA, user_input
         )
 
     async def async_step_gateway(
@@ -122,7 +129,7 @@ class BrinkFlairConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Configure an appliance behind a Modbus gateway."""
         return await self._async_configure(
-            TRANSPORT_GATEWAY, NETWORK_SCHEMA, user_input
+            TRANSPORT_GATEWAY, GATEWAY_SCHEMA, user_input
         )
 
     async def _async_configure(

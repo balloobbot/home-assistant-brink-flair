@@ -6,15 +6,16 @@ same data, or the two would land on different connections.
 
 The appliance speaks Modbus RTU on RS-485 and nothing else, so what differs
 between the two network transports is the box in front of the line rather
-than the appliance. A transparent serial server forwards the RTU frames as
-they are, which is ``rtu`` framing; a Modbus gateway terminates Modbus TCP
-and re-frames to RTU itself, which is ``socket``.
+than the appliance.
 
-Both are ``ModbusTcpParams``, so both key on ``("tcp", host, port)`` and
-share a connection with whatever else reaches that box. Describing a serial
-server as a ``socket://`` serial device would work too, and would key
-differently — two integrations would then open two sockets onto one
-half-duplex line and interleave frames on it.
+A serial server forwards the line byte for byte, so it is a serial link over
+a socket: ``ModbusSerialParams`` with a ``socket://`` device. A Modbus
+gateway terminates Modbus TCP and re-frames to RTU itself, so the network
+carries Modbus TCP: ``ModbusTcpParams``.
+
+Naming a serial server that way is what lets two integrations reaching one
+box share a connection, rather than opening two sockets onto one half-duplex
+line and interleaving frames on it.
 """
 
 from __future__ import annotations
@@ -31,8 +32,8 @@ from .const import (
     CONF_PARITY,
     CONF_STOPBITS,
     CONF_TRANSPORT,
+    TRANSPORT_GATEWAY,
     TRANSPORT_SERIAL,
-    TRANSPORT_SERIAL_SERVER,
 )
 
 CONF_UNIT_ID = "unit_id"
@@ -40,23 +41,37 @@ CONF_UNIT_ID = "unit_id"
 type BrinkFlairParams = ModbusSerialParams | ModbusTcpParams
 
 
+def _socket_device(host: str, port: int) -> str:
+    """A serial server's line, as the serial device URL that names it.
+
+    An IPv6 literal is bracketed. Without the brackets the URL does not
+    parse, because the address's own colons are read as the port separator.
+    """
+    address = f"[{host}]" if ":" in host else host
+    return f"socket://{address}:{port}"
+
+
 def connection_params(data: Mapping[str, Any]) -> tuple[BrinkFlairParams, int]:
     """The link parameters and unit id an entry's data describes."""
-    if data[CONF_TRANSPORT] == TRANSPORT_SERIAL:
-        params: BrinkFlairParams = ModbusSerialParams(
+    transport = data[CONF_TRANSPORT]
+    params: BrinkFlairParams
+    if transport == TRANSPORT_GATEWAY:
+        params = ModbusTcpParams(host=data[CONF_HOST], port=data[CONF_PORT])
+    elif transport == TRANSPORT_SERIAL:
+        params = ModbusSerialParams(
             device=data[CONF_DEVICE],
             baudrate=data[CONF_BAUDRATE],
             parity=data[CONF_PARITY],
             stopbits=data[CONF_STOPBITS],
-            framer="rtu",
         )
     else:
-        params = ModbusTcpParams(
-            host=data[CONF_HOST],
-            port=data[CONF_PORT],
-            framer="rtu"
-            if data[CONF_TRANSPORT] == TRANSPORT_SERIAL_SERVER
-            else "socket",
+        # The baud rate spaces the frames rather than configuring a port, so
+        # it is the speed the box runs its own line at. Parity and stop bits
+        # do configure a port, and there is none here, so they are left out:
+        # they would make two descriptions of one server compare unequal.
+        params = ModbusSerialParams(
+            device=_socket_device(data[CONF_HOST], data[CONF_PORT]),
+            baudrate=data[CONF_BAUDRATE],
         )
     return params, data[CONF_UNIT_ID]
 

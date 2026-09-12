@@ -84,8 +84,9 @@ Nothing is installed from PyPI: the device library is bundled — see
    - **A serial adapter on this machine** — give the device path (for
      example `/dev/ttyUSB0`), the unit id, and the baud rate, parity and stop
      bits from steps 14.2 to 14.4.
-   - **A serial server on the network** — give its host and port, and the
-     unit id. Set the appliance's line settings on the box itself.
+   - **A serial server on the network** — give its host, port, unit id, and
+     the baud rate the box runs its RS-485 line at. Parity and stop bits are
+     set on the box; the baud rate is asked for because it spaces the frames.
    - **A Modbus gateway on the network** — give its host and port, and the
      unit id.
 3. Home Assistant reads the appliance's identity to check the settings, then
@@ -107,10 +108,11 @@ they are configured**, and nothing on the network says which — so if one
 choice times out against a box you believe is wired and addressed correctly,
 try the other before suspecting the appliance.
 
-Both are stored as a Modbus TCP connection to the same host and port, so Home
-Assistant shares one socket with anything else that reaches the same box. It
-will refuse to configure the same host and port both ways at once: one line
-cannot be spoken to in two protocols.
+A serial server is stored as a serial link over a `socket://` device, because
+that is what it is. Home Assistant keys connections on that, so this
+integration shares one socket with anything else reaching the same box rather
+than opening a second one onto a half-duplex line. A gateway is stored as a
+Modbus TCP connection and shares in the same way.
 
 To add a second appliance, repeat the flow with its own unit id. Appliances on
 one line or one gateway share a connection automatically.

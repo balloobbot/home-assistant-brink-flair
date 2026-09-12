@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
-from modbus_connection import ModbusTimeoutError
+from modbus_connection import ModbusSerialParams, ModbusTcpParams, ModbusTimeoutError
 from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -101,19 +100,37 @@ async def test_the_numbers_are_stored_as_numbers(
     assert all(isinstance(data[key], int) for key in (CONF_BAUDRATE, CONF_UNIT_ID))
 
 
-@pytest.mark.parametrize(
-    ("transport", "framer"),
-    [
-        # A transparent serial server forwards the RTU frames as they are; a
-        # Modbus gateway terminates Modbus TCP and re-frames to RTU itself.
-        (TRANSPORT_SERIAL_SERVER, "rtu"),
-        (TRANSPORT_GATEWAY, "socket"),
-    ],
-)
-async def test_an_appliance_on_the_network(
-    hass: HomeAssistant, modbus: MockModbusUnit, transport: str, framer: str
+async def test_an_appliance_behind_a_serial_server(
+    hass: HomeAssistant, modbus: MockModbusUnit
 ) -> None:
-    flow_id = await start(hass, transport)
+    """A box forwarding the line is a serial link, named by a socket:// device."""
+    flow_id = await start(hass, TRANSPORT_SERIAL_SERVER)
+
+    result = await hass.config_entries.flow.async_configure(
+        flow_id,
+        {
+            CONF_HOST: "192.168.1.50",
+            CONF_PORT: 8899,
+            CONF_BAUDRATE: "19200",
+            CONF_UNIT_ID: UNIT_ID,
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_TRANSPORT] == TRANSPORT_SERIAL_SERVER
+
+    params, unit_id = connection_params(result["data"])
+    assert isinstance(params, ModbusSerialParams)
+    assert params.device == "socket://192.168.1.50:8899"
+    assert params.baudrate == 19200
+    assert unit_id == UNIT_ID
+
+
+async def test_an_appliance_behind_a_gateway(
+    hass: HomeAssistant, modbus: MockModbusUnit
+) -> None:
+    """A box answering Modbus TCP needs no framing or line settings."""
+    flow_id = await start(hass, TRANSPORT_GATEWAY)
 
     result = await hass.config_entries.flow.async_configure(
         flow_id,
@@ -122,24 +139,47 @@ async def test_an_appliance_on_the_network(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Brink Flair (192.168.1.50:502)"
-    assert result["data"][CONF_TRANSPORT] == transport
 
-    params, unit_id = connection_params(result["data"])
-    assert params.framer == framer
-    assert unit_id == UNIT_ID
+    params, _ = connection_params(result["data"])
+    assert isinstance(params, ModbusTcpParams)
+    assert (params.host, params.port) == ("192.168.1.50", 502)
 
 
-async def test_both_network_boxes_key_on_the_same_endpoint(
+async def test_a_serial_server_keys_as_the_serial_line_it_is(
     hass: HomeAssistant, modbus: MockModbusUnit
 ) -> None:
-    """So Home Assistant refuses the second rather than opening a second
-    socket onto one half-duplex line with the wrong framing."""
+    """So this integration shares one connection with anything else reaching
+    the same box, rather than opening a second socket onto one half-duplex
+    line. A gateway at that address is a different service and keys apart."""
     shared = {CONF_HOST: "192.168.1.50", CONF_PORT: 502, CONF_UNIT_ID: UNIT_ID}
-    server, _ = connection_params({**shared, CONF_TRANSPORT: TRANSPORT_SERIAL_SERVER})
+    server, _ = connection_params(
+        {**shared, CONF_TRANSPORT: TRANSPORT_SERIAL_SERVER, CONF_BAUDRATE: 19200}
+    )
     gateway, _ = connection_params({**shared, CONF_TRANSPORT: TRANSPORT_GATEWAY})
 
-    assert server.endpoint == gateway.endpoint
-    assert server != gateway
+    assert server.endpoint == ("serial", "socket://192.168.1.50:502")
+    assert (
+        server.endpoint
+        == ModbusSerialParams(device="socket://192.168.1.50:502").endpoint
+    )
+    assert gateway.endpoint != server.endpoint
+
+
+async def test_an_ipv6_serial_server_is_bracketed(
+    hass: HomeAssistant, modbus: MockModbusUnit
+) -> None:
+    """An unbracketed IPv6 literal makes a URL that cannot be parsed."""
+    params, _ = connection_params(
+        {
+            CONF_TRANSPORT: TRANSPORT_SERIAL_SERVER,
+            CONF_HOST: "fe80::1%eth0",
+            CONF_PORT: 8899,
+            CONF_BAUDRATE: 19200,
+            CONF_UNIT_ID: UNIT_ID,
+        }
+    )
+
+    assert params.device == "socket://[fe80::1%eth0]:8899"
 
 
 async def test_an_appliance_that_does_not_answer(
